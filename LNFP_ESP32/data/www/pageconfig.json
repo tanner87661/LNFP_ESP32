@@ -1,0 +1,9 @@
+{
+	"Pages":[
+		{"Menue":"Node Configuration", "WebPage": "index.htm", "ID":"pgNodeCfg"}, 
+		{"Menue":"MQTT Configuration", "WebPage": "MQTTCfg.htm", "ID":"pgMQTTCfg"}, 
+		{"Menue":"Hardware Button Setup", "WebPage": "HWBtnCfg.htm", "ID":"pgHWBtnCfg"}, 
+		{"Menue":"Button Handler Setup", "WebPage": "BtnHdlrCfg.htm", "ID":"pgBtnHdlrCfg"}, 
+		{"Menue":"Display LED Setup", "WebPage": "LEDCfg.htm", "ID":"pgLEDCfg"}
+		]
+}

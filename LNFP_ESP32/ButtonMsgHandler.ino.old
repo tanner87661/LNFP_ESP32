@@ -1,0 +1,55 @@
+//The LocoNet_In_Handler when receiving a button messages, updates the internal button state buffer and then calls the button event handler, which in turn calls the processCommandList function below
+//processCommandList checks for a stored command for the particular button event and, if there is one, executes it
+//aternatively an application could check for changes in the button state buffer, but this might be too slow, so an event handler is better for events that are time critical
+////////////////////////////////////////////////Handle Incoming Button Messages/////////////////////////////////////////////////////////////
+void processCommandList(uint16_t btnAddr, uint16_t inpValue)
+{
+  for (int i = 0; i < buttonHandlerListLen; i++)
+  {
+    IoTT_ButtonHandler * thisEntry = &buttonHandlerList[i];
+//    Serial.printf("Testing %i vs %i\n", thisEntry->btnAddr, btnAddr);
+    if (thisEntry->btnAddr == btnAddr) //yes, this is us!
+    {
+//      Serial.println("Found button command list");
+      switch (inpValue)
+      {
+        case onbtndown:
+          if (thisEntry->onBtnDownListLen > 0)
+            executeCommandList(thisEntry->onBtnDownListOfs, thisEntry->onBtnDownListLen);  
+          break;
+        case onbtnup:
+          if (thisEntry->onBtnUpListLen > 0)
+            executeCommandList(thisEntry->onBtnUpListOfs, thisEntry->onBtnUpListLen);  
+          break;
+        case onbtnclick:
+          if (thisEntry->onBtnClickListLen > 0)
+            executeCommandList(thisEntry->onBtnClickListOfs, thisEntry->onBtnClickListLen);  
+          break;
+        case onbtndblclick:
+          if (thisEntry->onBtnDblClickListLen > 0)
+            executeCommandList(thisEntry->onBtnDblClickListOfs, thisEntry->onBtnDblClickListLen);  
+          break;
+        case onbtnhold:
+          if (thisEntry->onBtnHoldListLen > 0)
+            executeCommandList(thisEntry->onBtnHoldListOfs, thisEntry->onBtnHoldListLen);  
+          break;
+      }
+    }
+  }
+}
+
+void executeCommandList(uint16_t listOfs, uint16_t listLen)
+{  
+  for (int i = 0; i < listLen; i++)
+  {
+    btnHandlerCmd * thisEntry = &btnHandlerCmdList[listOfs + i];
+//    Serial.println("Execute button command list");
+    switch (thisEntry->targetType)
+    {
+      case dccswitch: sendSwitchCommand(thisEntry->targetAddr, thisEntry->cmdType, thisEntry->cmdValue); break; //switch
+      case dccsignal: sendSignalCommand(thisEntry->targetAddr, thisEntry->cmdValue); break; //signal
+      case powerstat: sendPowerCommand(thisEntry->cmdType, thisEntry->cmdValue); break; //analog
+      case blockdet: sendBlockDetectorCommand(thisEntry->targetAddr, thisEntry->cmdValue); break; //analog
+    }
+  }
+}
