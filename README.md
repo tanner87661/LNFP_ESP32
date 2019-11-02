@@ -1,7 +1,7 @@
 # LNFP_ESP32
 Arduino Sketch for CTC Panel and Signaling System
 
-Watch Video #31 on YouTube Channel IoTTCloud
+Watch Video #31 on YouTube Channel IoTTCloud https://youtu.be/MuUwa7XUilw
 
 A main directory named LNFP_ESP32. Inside, Inside, there are 8 ino files containing the code from the eight tabs in the sketch. The main file of course is LNFP_ESP32.ino and when you open this file from the Arduino IDE, all other files will open as well.
 Then, there is a sub directory named data. Inside this directory is everything that will be loaded to the SPIFFS file of the ESP32. Inside data there are 2 more sub directories named www and configdata. The www directory is the root directory of the web server, so it has all web pages that can be accessed from the browser. The server is programmed to automatically open index.htm if it is called with no further arguments.
