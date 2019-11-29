@@ -1,10 +1,11 @@
-function createMenueTabElement(parentObj, objType, className, objID, objTitle, clickFct)
+function createMenueTabElement(parentObj, objType, className, objID, objTitle, visible, clickFct)
 {
 	var docElement = document.createElement(objType);
 	docElement.setAttribute('class', className);	
 	docElement.setAttribute("id", objID);
 	docElement.setAttribute("name", objTitle);
 	docElement.setAttribute("onclick", clickFct);
+	setVisibility(visible, docElement);
 	
 	if (docElement.childNodes[0])
     {
@@ -239,7 +240,7 @@ function createDataTable(parentObj, divclass, colHeaders, baseObjId, onchange) /
 
 	for (var i=0; i < colHeaders.length; i++)
 	{
-		console.log(colHeaders[i]);
+//		console.log(colHeaders[i]);
 		var newCol = document.createElement("td");
 		newCol.setAttribute("id", baseObjId + "_h_" + i.toString());
 		var newRB = document.createTextNode(colHeaders[i]);
@@ -250,39 +251,299 @@ function createDataTable(parentObj, divclass, colHeaders, baseObjId, onchange) /
 	return tt;
 }
 
-function tfPos(i)
+function tfSetCoordinate(element, row, col, index, id)
 {
-	var newRB = tfText(i+1);
+	element.setAttribute("id", id);
+	element.setAttribute("row", row);
+	element.setAttribute("col", col);
+	element.setAttribute("index", index);
+}
+
+function tfPos(y, x, id, evtHandler)
+{
+	var newRB = tfText(y, x, id, evtHandler);
+	tfSetCoordinate(newRB, y, x, 0, id);
+	newRB.setAttribute("class", "posfield");
+	newRB.innerHTML = y + 1;
 	return newRB;
 }
 
-function tfText(i)
+function tfText(y, x, id, evtHandler)
 {
-	var newRB = document.createTextNode(i.toString());
-	return newRB;
+	var textDiv = document.createElement("div");
+	tfSetCoordinate(textDiv, y, x, 0, id);
+	textDiv.setAttribute("class", "numinputstandard");
+	textDiv.append(document.createTextNode(i.toString()));
+	return textDiv;
 }
 
-function tfInpTypeSel(i)
+function tfInpTypeSel(y, x, id, evtHandler)
 {
 	
 	var selectList = document.createElement("select");
-	createOptions(selectList, ["Btn Down","Btn Up","Click","Btn Hold", "Btn Dbl Click", "Analog"]);
+	createOptions(selectList, ["Btn Down","Btn Up","Btn Click","Btn Hold", "Btn Dbl Click", "Analog"]);
+	tfSetCoordinate(selectList, y, x, 0, id);
+	selectList.setAttribute("class", "selectorbox");
+	selectList.setAttribute("onchange", evtHandler);
 	return selectList;
 }
 
-function tfBtnEvtSel(i)
+function tfBtnEvtSel(y, x, id, evtHandler)
 {
 	
 	var selectList = document.createElement("select");
 	createOptions(selectList, ["Off","Digital","Touch","Analog"]);
+	tfSetCoordinate(selectList, y, x, 0, id);
+	selectList.setAttribute("class", "selectorbox");
+	selectList.setAttribute("onchange", evtHandler);
 	return selectList;
 }
 
-function tfNumeric(i)
+function tfNumeric(y, x, id, evtHandler)
 {
 	var inpElement = document.createElement("input");
-	inpElement.setAttribute("type", "numinputshort");
+	inpElement.setAttribute("class", "numinputmedium");
+	tfSetCoordinate(inpElement, y, x, 0, id);
+	inpElement.setAttribute("onchange", evtHandler);
 	return inpElement;
+}
+
+function tfNumericLong(y, x, id, evtHandler)
+{
+	var inpElement = document.createElement("input");
+	inpElement.setAttribute("class", "inputtext_long");
+	tfSetCoordinate(inpElement, y, x, 0, id);
+	inpElement.setAttribute("onchange", evtHandler);
+	return inpElement;
+}
+
+function tfBtnAdd(y, x, id, evtHandler)
+{
+	var thisButton = document.createElement("button");
+	tfSetCoordinate(thisButton, y, x, 0, id);
+	thisButton.setAttribute("onclick", evtHandler);
+	thisButton.setAttribute('class', 'slim-button');
+	var textElement = document.createTextNode("Add");
+	thisButton.append(textElement);
+	return thisButton;
+}
+
+function tfBtnCancel(y, x, id, evtHandler)
+{
+	var thisButton = document.createElement("button");
+	tfSetCoordinate(thisButton, y, x, 0, id);
+	thisButton.setAttribute("onclick", evtHandler);
+	thisButton.setAttribute('class', 'slim-button');
+	var textElement = document.createTextNode("Cancel");
+	thisButton.append(textElement);
+	return thisButton;
+}
+
+function tfColorPicker(y, x, id, evtHandler)
+{
+	var inpElement = document.createElement("input");
+	tfSetCoordinate(inpElement, y, x, 0, id);
+	inpElement.setAttribute("class", "colorpicker");
+	inpElement.setAttribute("type", "color");
+	inpElement.setAttribute("onchange", evtHandler);
+	inpElement.value = "#ff0000";
+	return inpElement;
+	
+}
+
+function tfTableStarterBox(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	divElement.setAttribute("class", "manipulatorbox");
+	tfSetCoordinate(divElement, y, x, 0, id);
+	var imgElement;
+	imgElement = document.createElement("img");
+	imgElement.setAttribute('src', 'Add.png');
+	imgElement.setAttribute('alt', 'Add');
+	imgElement.setAttribute('class', 'img_icon');
+	imgElement.setAttribute('name', "add_" + i);
+	tfSetCoordinate(imgElement, y, x, 1, id);
+	imgElement.setAttribute("onclick", evtHandler);
+	divElement.append(imgElement);
+	return divElement;
+}
+
+function tfManipulatorBox(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	divElement.setAttribute("class", "manipulatorbox");
+	tfSetCoordinate(divElement, y, x, 0, id);
+	var imgElement;
+	imgElement = document.createElement("img");
+	imgElement.setAttribute('src', 'Add.png');
+	imgElement.setAttribute('alt', 'Add');
+	imgElement.setAttribute('class', 'img_icon');
+	imgElement.setAttribute('name', "add_" + i);
+	tfSetCoordinate(imgElement, y, x, 1, id);
+	imgElement.setAttribute("onclick", evtHandler);
+	divElement.append(imgElement);
+	imgElement = document.createElement("img");
+	imgElement.setAttribute('src', 'Delete.png');
+	imgElement.setAttribute('alt', 'Delete');
+	imgElement.setAttribute('class', 'img_icon');
+	imgElement.setAttribute('name', "del_" + i);
+	tfSetCoordinate(imgElement, y, x, 2, id);
+	imgElement.setAttribute("onclick", evtHandler);
+	divElement.append(imgElement);
+	imgElement = document.createElement("img");
+	imgElement.setAttribute('src', 'Up.png');
+	imgElement.setAttribute('alt', 'Up');
+	imgElement.setAttribute('class', 'img_icon');
+	imgElement.setAttribute('name', "up_" + i);
+	tfSetCoordinate(imgElement, y, x, 3, id);
+	imgElement.setAttribute("onclick", evtHandler);
+	divElement.append(imgElement);
+	imgElement = document.createElement("img");
+	imgElement.setAttribute('src', 'Down.png');
+	imgElement.setAttribute('alt', 'Down');
+	imgElement.setAttribute('class', 'img_icon');
+	imgElement.setAttribute('name', "down_" + i);
+	tfSetCoordinate(imgElement, y, x, 4, id);
+	imgElement.setAttribute("onclick", evtHandler);
+	divElement.append(imgElement);
+	return divElement;
+}
+
+function tfCommandSelector(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	divElement.setAttribute("class", "cmdsel");
+	tfSetCoordinate(divElement, y, x, 0, id);
+	var thisId = "manipulatorbox_" + y.toString() + "_" + x.toString();
+	var manpulatorElement = tfManipulatorBox(y, x, thisId, evtHandler);
+	divElement.append(manpulatorElement);
+	thisId = "addressbox_" + y.toString() + "_" + x.toString();
+	var addrBox = tfNumeric(y, x, thisId, evtHandler);
+	addrBox.setAttribute("index", 5);
+	divElement.append(addrBox);
+	thisId = "cmdlistbox_" + y.toString() + "_" + x.toString();
+	var selBox = tfInpTypeSel(y, x, thisId, evtHandler);
+	selBox.setAttribute("index", 6);
+	divElement.append(selBox);
+	return divElement;
+}
+
+function tfLEDSelector(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	divElement.setAttribute("class", "cmdsel");
+	tfSetCoordinate(divElement, y, x, 0, id);
+	
+	var upperDiv = document.createElement("div");
+	upperDiv.setAttribute("class", "editorpanel");
+	divElement.append(upperDiv);
+	
+	
+	var thisId = "manipulatorbox_" + y.toString() + "_" + x.toString();
+	var manpulatorElement = tfManipulatorBox(y, x, thisId, evtHandler);
+	upperDiv.append(manpulatorElement);
+
+	var thisText = tfText(y, x, id, evtHandler);
+	thisText.innerHTML = "LED ##:";
+	upperDiv.append(thisText);
+
+	thisId = "lednrbox_" + y.toString() + "_" + x.toString();
+	var ledBox = tfNumeric(y, x, thisId, evtHandler);
+	ledBox.setAttribute("index", 5);
+	upperDiv.append(ledBox);
+	
+	thisId = "multicolor_" + y.toString() + "_" + x.toString();
+	var cchBox = tfCheckBox(y, x, thisId, evtHandler);
+	cchBox.childNodes[0].setAttribute("index", 6);
+	cchBox.childNodes[1].innerHTML = "Individual Colors";
+	upperDiv.append(cchBox);
+	
+
+	var lowerDiv = document.createElement("div");
+	lowerDiv.setAttribute("class", "editorpanel");
+	divElement.append(lowerDiv);
+
+	var thisSpacer = document.createElement("div");
+	thisSpacer.setAttribute("class", "manipulatorbox");
+	lowerDiv.append(thisSpacer);
+
+	thisId = "cmdlistbox_" + y.toString() + "_" + x.toString();
+	var selBox = tfLEDCtrlTypeSel(y, x, thisId, evtHandler);
+	selBox.setAttribute("index", 7);
+	lowerDiv.append(selBox);
+
+	var thisText = tfText(y, x, id, evtHandler);
+	thisText.innerHTML = "Addr.:";
+	lowerDiv.append(thisText);
+
+	thisId = "addressbox_" + y.toString() + "_" + x.toString();
+	var addrBox = tfNumeric(y, x, thisId, evtHandler);
+	addrBox.setAttribute("index", 8);
+	lowerDiv.append(addrBox);
+	return divElement;
+}
+
+function tfBtnCommandEditor(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	tfSetCoordinate(divElement, y, x, 0, id);
+	divElement.setAttribute("class", "cmdedit");
+	divElement.append(tfPos(y, x, id, evtHandler));
+	var mainDiv = document.createElement("div");
+	mainDiv.setAttribute("class", "editortile");
+	
+	var upperDiv = document.createElement("div");
+	upperDiv.setAttribute("class", "editorpanel");
+	upperDiv.append(tfManipulatorBox(y, x, id, evtHandler));
+	upperDiv.append(tfCmdLineHeader(y, x, id, evtHandler));
+	mainDiv.append(upperDiv);
+	var lowerDiv = document.createElement("div");
+	lowerDiv.setAttribute("class", "editorpanel");
+	var hlpDiv = tfEmptyTile(y, x, id, evtHandler);
+	hlpDiv.setAttribute("class", "manipulatorbox");
+	lowerDiv.append(hlpDiv);
+//	lowerDiv.append(tfCmdLineEditor(x, y, id, evtHandler));
+	mainDiv.append(lowerDiv);
+
+	divElement.append(mainDiv);
+
+	return divElement;
+}
+
+function tfCheckBox(y, x, id, evtHandler)
+{
+	var textDiv = document.createElement("div");
+
+	var cbElement = document.createElement("input");
+	cbElement.setAttribute("type", "checkbox");
+	cbElement.setAttribute("id", id);
+	cbElement.setAttribute('class', "checkbox");
+	cbElement.setAttribute("onclick", evtHandler);
+	tfSetCoordinate(cbElement, y, x, 0, id);
+	textDiv.append(cbElement);
+	
+	var textElement = document.createElement("span");
+	textElement.setAttribute('id', id + "_cbtxt");
+	textElement.setAttribute('class', "checkboxtext");
+	textElement.append(document.createTextNode(""));
+	textDiv.append(textElement);
+	return textDiv;
+}
+
+function tfCommandEditor(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	divElement.setAttribute("class", "cmdedit");
+	tfSetCoordinate(divElement, y, x, 0, id);
+	return divElement;
+}
+
+function tfEmptyTile(y, x, id, evtHandler)
+{
+	var divElement = document.createElement("div");
+	divElement.setAttribute("id", id);
+	divElement.append(document.createTextNode("xx"));
+	return divElement;
 }
 
 function createDataTableLines(tableObj, colLoaders, numLines, onchange)
@@ -292,19 +553,32 @@ function createDataTableLines(tableObj, colLoaders, numLines, onchange)
 	var numCols = th.childNodes[0].children.length;
 	while (tb.hasChildNodes())
 		tb.removeChild(tb.childNodes[0]); //delete rows
-	for (var i=0; i < numLines; i++)
+	if (numLines > 0)
+		for (var i=0; i < numLines; i++)
+		{
+			var newRow = document.createElement("tr");
+			newRow.setAttribute("class", "th");
+			tb.append(newRow);
+			for (var j=0; j < numCols; j++)
+			{
+				var thisId = tableObj.id + "_inp_" + i.toString() + "_" + j.toString();
+				var newCol = document.createElement("td");
+				newCol.setAttribute("id", tableObj.id + "_" + i.toString() + "_" + j.toString());
+				newRow.append(newCol);
+				var newRB = colLoaders[j](i, j, thisId, onchange);
+				newCol.append(newRB);
+			}
+		}
+	else
 	{
 		var newRow = document.createElement("tr");
 		newRow.setAttribute("class", "th");
 		tb.append(newRow);
-		for (var j=0; j < numCols; j++)
-		{
-			var newCol = document.createElement("td");
-			newCol.setAttribute("id", tableObj.id + "_" + i.toString() + "_" + j.toString());
-			newRow.append(newCol);
-			var newRB = colLoaders[j](i);
-			newCol.append(newRB);
-		}
+		var thisId = tableObj.id + "_initadd";
+		var newCol = document.createElement("td");
+		newRow.append(newCol);
+		var newRB = tfTableStarterBox(-1, -1, thisId, onchange);
+		newCol.append(newRB);
 	}
 }
 
@@ -336,7 +610,7 @@ function verifyNumber(inpValue, defValue)
 		return defValue;	
 	}
 	else
-		return parseInt(inpValue);
+		return parseFloat(inpValue);
 }
 
 function writeInputField(thisObjID, newValue)
@@ -406,4 +680,13 @@ function formatTime(seconds) {
     ]
         .join(":")
         .replace(/\b(\d)\b/g, "0$1")
+}
+
+function createListViewer(parentObj, className, dispListID)
+{
+	var docElement = document.createElement("ul");
+	docElement.setAttribute('class', className);	
+	docElement.setAttribute("id", dispListID);
+	parentObj.append(docElement);
+	return docElement;
 }

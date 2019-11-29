@@ -177,3 +177,24 @@ void onAnalogData(uint16_t inpNr, uint16_t analogValue )
   sendAnalogCommand(inpNr, analogValue);
   Serial.printf("Analog Input %i has value %i.\n", inpNr, analogValue);
 }
+
+void onBtnDiagnose(uint8_t evtType, uint8_t portNr, uint16_t inpAddr, uint16_t btnValue)
+{
+    Serial.printf("Button %i Diagnose %i alias %i has value %i.\n", evtType, portNr, inpAddr, btnValue);
+    DynamicJsonDocument doc(1200);
+    char myMqttMsg[400];
+    
+    if (globalClient != NULL)
+    {
+        doc["Cmd"] = "HWBtn";
+        JsonArray data = doc.createNestedArray("Data");
+        data.add(evtType);
+        data.add(portNr);
+        data.add(inpAddr);
+        data.add(btnValue);
+        serializeJson(doc, myMqttMsg);
+        globalClient->text(myMqttMsg);
+        Serial.println(myMqttMsg);
+        lastWifiUse = millis();
+    }
+}

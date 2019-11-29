@@ -1,17 +1,16 @@
-const String BBVersion = "1.0.0";
+const String BBVersion = "1.1.0";
 
-#define measurePerformance //uncomment this to display the number of loop cycles per second
+//#define measurePerformance //uncomment this to display the number of loop cycles per second
 
 
 //Arduino published libraries. Install using the Arduino IDE or download from Github and install manually
 #include <arduino.h>
 #include <EEPROM.h> //standard library, can be installed in the Arduino IDE
 #include <WiFi.h>
-#include <TimeLib.h> //standard library, can be installed in the Arduino IDE
+#include <time.h>
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
-#include <ESPAsyncWiFiManager.h>         //https://github.com/tzapu/WiFiManager or install using library manager
-#include <NTPtimeESP.h> //NTP time library from Andreas Spiess, download from https://github.com/SensorsIot/NTPtimeESP
+#include <ESPAsyncWiFiManager.h>         //https://github.com/alanswx/ESPAsyncWiFiManager
 #include <SPIFFS.h>
 #define FORMAT_SPIFFS_IF_FAILED true
 #include <ArduinoJson.h> //standard JSON library, can be installed in the Arduino IDE. Make sure to use version 6.x
@@ -34,7 +33,8 @@ DNSServer * dnsServer = NULL;
 WiFiClient * wifiClient = NULL;
 AsyncWebSocket * ws = NULL; //("/ws");
 AsyncWebSocketClient * globalClient = NULL;
-uint16_t wsRequest = 0;
+uint16_t wsReadPtr = 0;
+char wsBuffer[16384]; //should this by dynamic?
 
 //global variables
 bool useStaticIP = false;
@@ -65,7 +65,6 @@ ln_mqttGateway * commGateway = NULL;
 IoTT_ledChain * myChain = NULL;
 MQTTESP32 * lnMQTT = NULL;
 NmraDcc  * myDcc = NULL;
-NTPtime * NTPch = NULL; 
 
 //some variables used for performance measurement
 #ifdef measurePerformance
@@ -79,13 +78,16 @@ uint32_t myTimer = millis() + 1000;
 
 //global variables for the NTP module
 int ntpTimeout = 5000; //ms timeout for NTP update request
-int ntpTimeZone = 0; //change to default local time zone
 char ntpServer[50] = "us.pool.ntp.org"; //default server for US. Change this to the best time server for your region, or set in node.cfg
+char ntpTimeZone[100] = "EST5EDT";  // default for Eastern Time Zone. Enter your time zone from here: (https://remotemonitoringsystems.ca/time-zone-abbreviations.php) into node.cfg
 bool ntpOK = false;
+bool useNTP = false;
+tm timeinfo;
+time_t now;
 const uint32_t ntpIntervallDefault = 86400000; //1 day in milliseconds
 const uint32_t ntpIntervallShort = 10000; //10 Seconds in case something went wrong
 uint32_t ntpTimer = millis();
-strDateTime dateTime;
+//strDateTime dateTime;
 
 //commMode: 0: DCC, 1: LocoNet, 2: MQTT, 3: Gateway
 //workMode: 0: Decoder, 1: ALM
@@ -306,21 +308,30 @@ void setup() {
     {
       Serial.println("Connect MQTT");  
       establishMQTTConnection();
+      Serial.println("Connect MQTT done");  
     }
     if (jsonConfigObj->containsKey("useNTP"))
     {
-      if ((bool)(*jsonConfigObj)["useNTP"])
+      useNTP = (bool)(*jsonConfigObj)["useNTP"];
+      if (useNTP)
       {
         Serial.println("Create NTP Time Access");  
-        strcpy(ntpServer, (*jsonConfigObj)["ntpConfig"]["NTPServer"]);
-        NTPch = new NTPtime(ntpServer); 
-        ntpTimeZone = (*jsonConfigObj)["ntpConfig"]["ntpTimeZone"];
+        JsonObject ntpConfig = (*jsonConfigObj)["ntpConfig"];
+        if (ntpConfig.containsKey("NTPServer"))
+          strcpy(ntpServer, ntpConfig["NTPServer"]);
+        if (ntpConfig.containsKey("ntpTimeZone"))
+          if (ntpConfig["ntpTimeZone"].is<const char*>())
+            strcpy(ntpTimeZone, ntpConfig["ntpTimeZone"]);
+          else
+            Serial.println("ntpTimeZone is wrong data type");
+        configTime(0, 0, ntpServer);
+        setenv("TZ", ntpTimeZone, 1);
       }
       else 
         Serial.println("NTP Module not activated");
     }
     delete(jsonConfigObj);
-    if (NTPch) getInternetTime(NTPch);
+    if (useNTP) getInternetTime();
     startWebServer();
     Serial.println(String(ESP.getFreeHeap()));
   }
@@ -343,6 +354,7 @@ void loop() {
   if (myChain) myChain->processChain(); //updates all LED's based on received status information for switches, inputs, buttons, etc.
 //  if (secElHandlerList) secElHandlerList->processLoop(); //calculates speeds in all blocks and sets signals accordingly
   if (myDcc) myDcc->process(); //receives and decodes track signals
+  if (buttonHandler) buttonHandler->processButtonHandler(); //drives the outgoing buffer and time delayed commands
 
   checkWifiTimeout(); //checks if wifi has been inactive and disables it after timeout
   if (!wifiCancelled) //handles keep alive updates as long connection is valid
@@ -350,8 +362,8 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED)
     { 
       sendKeepAlive();
-      if (NTPch)
-        getInternetTime(NTPch); //gets periodic updates of date and time from NTP server
+      if (useNTP)
+        getInternetTime(); //gets periodic updates of date and time from NTP server
     }
     else
     {

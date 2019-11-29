@@ -99,10 +99,11 @@ void processStatustoWebClient()
     doc["Cmd"] = "STATS";
     JsonObject Data = doc.createNestedObject("Data");
     Data["uptime"] = millis();
-    if (NTPch && ntpOK)
+    if (useNTP && ntpOK)
     {
+      now = time(0);
       char buff[40]; //39 digits plus the null char
-      sprintf(buff, "%4d-%02d-%02d %d:%02d", year(), month(), day(), hour(), minute());
+      strftime(buff, 40, "%d-%m-%y %H:%M:%S", localtime(&now));
       Data["systime"] = buff;
     }
     Data["freemem"] = String(ESP.getFreeHeap());
@@ -121,6 +122,59 @@ void sendKeepAlive()
     if (globalClient != NULL)
       processStatustoWebClient();
     keepAlive += keepAliveInterval;
+  }
+}
+
+void processWsMesssage(String newMsg,AsyncWebSocketClient * client)
+{
+  Serial.println(newMsg);
+  DynamicJsonDocument doc(3 * newMsg.length());
+  DeserializationError error = deserializeJson(doc, newMsg);
+  if (!error)
+  {
+    if (doc.containsKey("Cmd"))
+    {
+      String thisCmd = doc["Cmd"];
+      if (thisCmd == "CfgData") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg"}
+      {
+        String cmdType = doc["Type"];
+        String fileStr = "{\"Cmd\":\"CfgData\", \"Type\":\"" + cmdType + "\",\"Data\":";
+        if (cmdType == "pgNodeCfg")
+          fileStr += readFile("/configdata/node.cfg");
+        if (cmdType == "pgMQTTCfg")
+          fileStr += readFile("/configdata/mqtt.cfg");
+        if (cmdType == "pgHWBtnCfg")
+         fileStr += readFile("/configdata/btn.cfg");
+        if (cmdType == "pgBtnHdlrCfg")
+          fileStr += readFile("/configdata/btnevt.cfg");
+        if (cmdType == "pgLEDCfg")
+          fileStr += readFile("/configdata/led.cfg");
+        if (cmdType == "pgLNViewer")
+          return;
+        if (cmdType == "pgDCCViewer")
+          return;
+
+        fileStr += "}";
+        Serial.println(fileStr);  
+        client->text(fileStr);
+      }
+      if (thisCmd == "CfgUpdate") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg", "Data":{}}
+      {
+        String cmdType = doc["Type"];
+        String fileStr = doc["Data"];
+        if (cmdType == "pgNodeCfg")
+          writeJSONFile("/configdata/node.cfg", fileStr);
+        if (cmdType == "pgMQTTCfg")
+          writeJSONFile("/configdata/mqtt.cfg", fileStr);
+        if (cmdType == "pgHWBtnCfg")
+          writeJSONFile("/configdata/btn.cfg", fileStr);
+        if (cmdType == "pgBtnHdlrCfg")
+          writeJSONFile("/configdata/btnevt.cfg", fileStr);
+        if (cmdType == "pgLEDCfg")
+          writeJSONFile("/configdata/led.cfg", fileStr);
+        ESP.restart(); //configuration update requires restart to be sure dynamic allocation of objects is not messed up
+      }
+    }
   }
 }
 
@@ -146,71 +200,23 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
     case WS_EVT_DATA:
     {
       AwsFrameInfo * info = (AwsFrameInfo*)arg;
-      String msg = "";
+//      String msg = "";
       if(info->final && info->index == 0 && info->len == len)
       {
         //the whole message is in a single frame and we got all of it's data
-//        Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
-
+        wsReadPtr = 0;
         if(info->opcode == WS_TEXT)
         {
           for(size_t i=0; i < info->len; i++) 
           {
-            msg += (char) data[i];
+            wsBuffer[wsReadPtr] = (char) data[i];
+            wsReadPtr++;
           }
+          processWsMesssage(String(wsBuffer), client);
         } 
         else 
         {
-          char buff[3];
-          for(size_t i=0; i < info->len; i++) 
-          {
-            sprintf(buff, "%02x ", (uint8_t) data[i]);
-            msg += buff ;
-          }
-        }
-//        Serial.println(msg);
-        DynamicJsonDocument doc(3 * msg.length());
-        DeserializationError error = deserializeJson(doc, msg);
-        if (!error)
-        {
-          if (doc.containsKey("Cmd"))
-          {
-            String thisCmd = doc["Cmd"];
-            if (thisCmd == "CfgData") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg"}
-            {
-              String cmdType = doc["Type"];
-              String fileStr = "{\"Cmd\":\"CfgData\",\"Data\":";
-              if (cmdType == "pgNodeCfg")
-                fileStr += readFile("/configdata/node.cfg");
-              if (cmdType == "pgMQTTCfg")
-                fileStr += readFile("/configdata/mqtt.cfg");
-              if (cmdType == "pgHWBtnCfg")
-                fileStr += readFile("/configdata/btn.cfg");
-              if (cmdType == "pgBtnHdlrCfg")
-                fileStr += readFile("/configdata/btnevt.cfg");
-              if (cmdType == "pgLEDCfg")
-                fileStr += readFile("/configdata/led.cfg");
-              fileStr += "}";
-              Serial.println(fileStr);  
-              client->text(fileStr);
-            }
-            if (thisCmd == "CfgUpdate") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg", "Data":{}}
-            {
-              String cmdType = doc["Type"];
-              String fileStr = doc["Data"];
-              if (cmdType == "pgNodeCfg")
-                writeJSONFile("/configdata/node.cfg", fileStr);
-              if (cmdType == "pgMQTTCfg")
-                writeJSONFile("/configdata/mqtt.cfg", fileStr);
-              if (cmdType == "pgHWBtnCfg")
-                writeJSONFile("/configdata/btn.cfg", fileStr);
-              if (cmdType == "pgBtnHdlrCfg")
-                writeJSONFile("/configdata/btnevt.cfg", fileStr);
-              if (cmdType == "pgLEDCfg")
-                writeJSONFile("/configdata/led.cfg", fileStr);
-              ESP.restart(); //configuration update requires restart to be sure dynamic allocation of objects is not messed up
-            }
-          }
+          //no processing of non-text messages at this time
         }
       } 
       else 
@@ -218,40 +224,36 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         //message is comprised of multiple frames or the frame is split into multiple packets
         if(info->index == 0)
         {
-          if(info->num == 0)
-            Serial.printf("ws[%s][%u] %s-message start\n", server->url(), client->id(), (info->message_opcode == WS_TEXT)?"text":"binary");
-          Serial.printf("ws[%s][%u] frame[%u] start[%llu]\n", server->url(), client->id(), info->num, info->len);
+          wsReadPtr = 0;
+          Serial.println("Reset Read Ptr");
+//          if(info->num == 0)
+//            Serial.printf("ws[%s][%u] %s-message start\n", server->url(), client->id(), (info->message_opcode == WS_TEXT)?"text":"binary");
+//          Serial.printf("multi ws[%s][%u] frame[%u] start[%llu]\n", server->url(), client->id(), info->num, info->len);
         }
 
-        Serial.printf("ws[%s][%u] frame[%u] %s[%llu - %llu]: ", server->url(), client->id(), info->num, (info->message_opcode == WS_TEXT)?"text":"binary", info->index, info->index + len);
+        Serial.printf("ws[%s][%u] frame[%u] %s[%llu - %llu]: \n", server->url(), client->id(), info->num, (info->message_opcode == WS_TEXT)?"text":"binary", info->index, info->index + len);
 
-        if(info->opcode == WS_TEXT){
-          for(size_t i=0; i < info->len; i++) 
+        if(info->opcode == WS_TEXT)
+        {
+          Serial.println("adding...");
+          for(size_t i=0; i < len; i++) 
           {
-            msg += (char) data[i];
+            wsBuffer[wsReadPtr] = (char) data[i];
+            wsReadPtr++;
           }
         } 
         else 
         {
-          char buff[3];
-          for(size_t i=0; i < info->len; i++) 
-          {
-            sprintf(buff, "%02x ", (uint8_t) data[i]);
-            msg += buff ;
-          }
+            //no processing of non-text data at this time
         }
-        Serial.printf("%s\n",msg.c_str());
-
+        wsBuffer[wsReadPtr] = char(0);
+        Serial.println(wsReadPtr);
         if((info->index + len) == info->len)
         {
-          Serial.printf("ws[%s][%u] frame[%u] end[%llu]\n", server->url(), client->id(), info->num, info->len);
           if(info->final)
           {
-            Serial.printf("ws[%s][%u] %s-message end\n", server->url(), client->id(), (info->message_opcode == WS_TEXT)?"text":"binary");
             if(info->message_opcode == WS_TEXT)
-              client->text("I got your text message");
-            else
-              client->binary("I got your binary message");
+              processWsMesssage(String(wsBuffer), client);
           }
         }
       }

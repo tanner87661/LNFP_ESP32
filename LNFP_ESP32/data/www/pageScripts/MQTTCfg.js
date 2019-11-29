@@ -98,6 +98,10 @@ function constructPageContent(contentTab)
 
 }
 
+function loadNodeDataFields(jsonData)
+{
+}
+
 function processStatsData(jsonData)
 {
 	writeTextField("sysdatetime", jsonData.systime);

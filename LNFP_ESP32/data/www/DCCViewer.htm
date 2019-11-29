@@ -6,7 +6,7 @@
 -->
 <script type="text/javascript" src="pageloader.js"></script>
 <script type="text/javascript" src="pagebuilder.js"></script>
-<script type="text/javascript" src="/pageScripts/NodeCfg.js"></script>
+<script type="text/javascript" src="/pageScripts/DCCViewer.js"></script>
 
 <link rel = "stylesheet" type = "text/css" href = "iottbase.css" />
    
@@ -28,8 +28,6 @@
 <script>
 	var url = window.location.pathname;
 	var fileName = url.substring(url.lastIndexOf('/')+1);
-	if (fileName == "")
-	  fileName = "index.htm";
 	loadPageList(fileName, document.getElementById("MenueHolder"), document.getElementById("TabHolder"), document.getElementById("FooterHolder"));
 	setTimeout(function(){ startWebsockets() }, 500);
 </script>

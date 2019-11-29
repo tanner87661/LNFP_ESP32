@@ -106,7 +106,8 @@ function setNTPServer(sender)
 
 function setNTPTimeZone(sender)
 {
-	configWorkData.ntpConfig.ntpTimeZone = verifyNumber(sender.value, configWorkData.ntpConfig.ntpTimeZone);
+//	configWorkData.ntpConfig.ntpTimeZone = verifyNumber(sender.value, configWorkData.ntpConfig.ntpTimeZone);
+	configWorkData.ntpConfig.ntpTimeZone = sender.value;
 }
 
 function setNodeName(sender)
@@ -375,6 +376,10 @@ function constructPageContent(contentTab)
 			createButton(tempObj, "tile-1_4", "Save & Restart", "btnSave", "saveSettings(this)");
 			createButton(tempObj, "tile-1_4", "Cancel", "btnCancel", "cancelSettings(this)");
 
+}
+
+function loadNodeDataFields(jsonData)
+{
 }
 
 function processStatsData(jsonData)

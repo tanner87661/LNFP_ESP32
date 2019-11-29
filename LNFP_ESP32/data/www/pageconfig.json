@@ -1,9 +1,11 @@
 {
 	"Pages":[
-		{"Menue":"Node Configuration", "WebPage": "index.htm", "ID":"pgNodeCfg"}, 
-		{"Menue":"MQTT Configuration", "WebPage": "MQTTCfg.htm", "ID":"pgMQTTCfg"}, 
-		{"Menue":"Hardware Button Setup", "WebPage": "HWBtnCfg.htm", "ID":"pgHWBtnCfg"}, 
-		{"Menue":"Button Handler Setup", "WebPage": "BtnHdlrCfg.htm", "ID":"pgBtnHdlrCfg"}, 
-		{"Menue":"Display LED Setup", "WebPage": "LEDCfg.htm", "ID":"pgLEDCfg"}
+		{"Menue":"Node Configuration", "UseDec": 1, "UseALM":1, "ReqWifi": 0, "WebPage": "index.htm", "ID":"pgNodeCfg"}, 
+		{"Menue":"MQTT Configuration", "UseDec": 1, "UseALM":1, "ReqWifi": 1, "WebPage": "MQTTCfg.htm", "ID":"pgMQTTCfg"}, 
+		{"Menue":"Hardware Button Setup", "UseDec": 0, "UseALM":1, "ReqWifi": 0, "WebPage": "HWBtnCfg.htm", "ID":"pgHWBtnCfg"}, 
+		{"Menue":"Button Handler Setup", "UseDec": 0, "UseALM":1, "ReqWifi": 0, "WebPage": "BtnHdlrCfg.htm", "ID":"pgBtnHdlrCfg"}, 
+		{"Menue":"Display LED Setup", "UseDec": 1, "UseALM":1, "ReqWifi": 0, "WebPage": "LEDCfg.htm", "ID":"pgLEDCfg"},
+		{"Menue":"LocoNet Viewer", "UseDec": 1, "UseALM":1, "ReqWifi": 0, "ReqLN": 1, "WebPage": "LNViewer.htm", "ID":"pgLNViewer"},
+		{"Menue":"DCC Viewer", "UseDec": 1, "UseALM":1, "ReqWifi": 0, "ReqDCC": 1, "WebPage": "DCCViewer.htm", "ID":"pgDCCViewer"}
 		]
 }

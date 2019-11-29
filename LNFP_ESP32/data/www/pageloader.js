@@ -5,6 +5,7 @@ var ws = null; // = new WebSocket(serverIP);
 var scriptList;
 var currentPage = 0;
 
+var nodeConfigData;
 var configLoadData;
 var configWorkData;
 
@@ -26,10 +27,10 @@ function loadPageList(pageName, menueTab, contentTab, footerTab)
 					{
 //						console.log("Setting ID", pageName, scriptList.Pages[i].ID );
 						currentPage = i; //scriptList.Pages[i].ID;
-						createMenueTabElement(menueTab, "button", "tablink", scriptList.Pages[i].ID, scriptList.Pages[i].Menue, "");
+						createMenueTabElement(menueTab, "button", "tablink", scriptList.Pages[i].ID, scriptList.Pages[i].Menue, true, "");
 					}
 					else
-						createMenueTabElement(menueTab, "button", "tablink", scriptList.Pages[i].ID, scriptList.Pages[i].Menue, "loadPage('" + scriptList.Pages[i].WebPage+ "')");
+						createMenueTabElement(menueTab, "button", "tablink", scriptList.Pages[i].ID, scriptList.Pages[i].Menue, false,"loadPage('" + scriptList.Pages[i].WebPage+ "')");
 						
 				}
 				updateMenueTabs(scriptList.Pages[currentPage].ID, "grey");
@@ -56,6 +57,31 @@ function updateMenueTabs(pageID, color)
 	}
 }
 
+function showMenueTabs()
+{
+	for (i=0; i<scriptList.Pages.length;i++)
+	{
+		var tabElement = document.getElementById(scriptList.Pages[i].ID);
+		var isVisible = true;
+		if ((nodeConfigData.workMode == 0) && (scriptList.Pages[i].UseDec == 0))
+			isVisible = false;
+		if ((nodeConfigData.workMode == 1) && (scriptList.Pages[i].UseALM == 0))
+			isVisible = false;
+		if ((nodeConfigData.useWifiTimeout == 1) && (scriptList.Pages[i].ReqWifi == 1))
+			isVisible = false;
+
+		if (scriptList.Pages[i].ReqDCC == 1)
+			if (nodeConfigData.commMode != 0)
+				isVisible = false;
+
+		if (scriptList.Pages[i].ReqLN == 1)
+			if (nodeConfigData.commMode == 0)
+				isVisible = false;
+
+		setVisibility(isVisible, tabElement);
+	}
+}
+
 function loadPage(pageURL)
 {
 	window.location.href = pageURL;
@@ -78,14 +104,12 @@ function cancelSettings(sender)
 
 function startWebsockets()
 {
-//	document.addEventListener("visibilitychange", handleVisibilityChange, false);
-//	console.log("init websockets");
 	ws = new WebSocket(serverIP);
 	  
     ws.onopen = function() 
     {
-//		console.log("Page Open", scriptList.Pages[currentPage].ID);	
-//		console.log("{\"Cmd\":\"CfgData\", \"Type\":\"" + scriptList.Pages[currentPage].ID + "\"}");	
+  		if (scriptList.Pages[currentPage].ID != "pgNodeCfg")
+			ws.send("{\"Cmd\":\"CfgData\", \"Type\":\"pgNodeCfg\"}");
 		ws.send("{\"Cmd\":\"CfgData\", \"Type\":\"" + scriptList.Pages[currentPage].ID + "\"}");
     };
  
@@ -105,21 +129,36 @@ function startWebsockets()
     ws.onmessage = function(evt) 
     {
 //		console.log(evt.data);
+//		console.log(currentPage);
   		var myArr = JSON.parse(evt.data);
   		if (myArr.Cmd == "STATS")
   		{
-			console.log(JSON.stringify(myArr.Data));
+//			console.log(JSON.stringify(myArr.Data));
 			processStatsData(myArr.Data);
 		}
-  		if ((myArr.Cmd == "LN") && (scriptList.Pages[currentPage].ID == "pgNodeCfg"))
+  		if ((myArr.Cmd == "HWBtn") && (scriptList.Pages[currentPage].ID == "pgHWBtnCfg"))
+  		{
 			console.log(JSON.stringify(myArr.Data));
-  		if ((myArr.Cmd == "DCC") && (scriptList.Pages[currentPage].ID == "pgNodeCfg"))
-			console.log(JSON.stringify(myArr.Data));
+			processLocoNetInput(myArr.Data);
+		}
+  		if ((myArr.Cmd == "LN") && (scriptList.Pages[currentPage].ID == "pgLNViewer"))
+			processLocoNetInput(myArr.Data);
+  		if ((myArr.Cmd == "DCC") && (scriptList.Pages[currentPage].ID == "pgDCCViewer"))
+			processDCCInput(myArr.Data);
   		if (myArr.Cmd == "CfgData")
   		{
-			configLoadData = JSON.parse(JSON.stringify(myArr.Data));
-			configWorkData = JSON.parse(JSON.stringify(myArr.Data));
-			loadDataFields(configLoadData);
+			if (myArr.Type == scriptList.Pages[currentPage].ID)
+			{
+				configLoadData = JSON.parse(JSON.stringify(myArr.Data));
+				configWorkData = JSON.parse(JSON.stringify(myArr.Data));
+				loadDataFields(configWorkData);
+			}
+			if (myArr.Type == "pgNodeCfg") //this is pgNodeCfg for all other pages
+			{
+				nodeConfigData = JSON.parse(JSON.stringify(myArr.Data));
+				showMenueTabs();
+				loadNodeDataFields(nodeConfigData);
+			}
 		}
 	}
 };
