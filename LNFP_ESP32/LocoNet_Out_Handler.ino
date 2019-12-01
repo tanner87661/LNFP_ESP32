@@ -65,7 +65,7 @@ void sendBlockDetectorCommand(uint16_t bdNr, uint8_t bdStatus)
   lnTransmitMsg txData;
   txData.lnMsgSize = 4;
   txData.lnData[0] = 0xB2; //OPC_INPUT_REP
-  txData.lnData[1] = (bdNr & 0x00FE);
+  txData.lnData[1] = (bdNr & 0x00FE)>>1;
   txData.lnData[2] = (bdNr & 0x0F00)>>7;
   if ((bdNr & 0x0001) > 0)
     txData.lnData[2] |= 0x20;
