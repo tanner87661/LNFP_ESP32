@@ -156,6 +156,8 @@ function setCommandData(sender)
 			{
 				case "switch": configWorkData.ButtonHandler[thisRow].CtrlCmd[thisCmd].CmdList[thisCmdLine].CtrlValue = swiPwrOptions[sender.selectedIndex];
 				break;
+				case "block": configWorkData.ButtonHandler[thisRow].CtrlCmd[thisCmd].CmdList[thisCmdLine].CtrlValue = swiPwrOptions[sender.selectedIndex];
+				break;
 				case "signal": configWorkData.ButtonHandler[thisRow].CtrlCmd[thisCmd].CmdList[thisCmdLine].CtrlValue = verifyNumber(sender.value, configWorkData.ButtonHandler[thisRow].CtrlCmd[thisCmd].CmdList[thisCmdLine].CtrlValue);
 				break;
 			}
