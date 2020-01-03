@@ -91,7 +91,7 @@ void sendButtonCommand(uint16_t btnNr, uint8_t  btnEvent)
   txData.lnData[7] = 0x00;
   
   txData.lnData[8] = (btnNr & 0x3F); //addr low 6  bit
-  txData.lnData[9] = (btnNr & 0xFC) >> 6; //addr high 6 bits
+  txData.lnData[9] = (btnNr & 0xFC0) >> 6; //addr high 6 bits
   
   txData.lnData[10] = 0x10;
   txData.lnData[11] = 0x01; //button message
@@ -178,23 +178,24 @@ void onAnalogData(uint16_t inpNr, uint16_t analogValue )
   Serial.printf("Analog Input %i has value %i.\n", inpNr, analogValue);
 }
 
+
 void onBtnDiagnose(uint8_t evtType, uint8_t portNr, uint16_t inpAddr, uint16_t btnValue)
 {
+  if (globalClient != NULL)
+  {
     Serial.printf("Button %i Diagnose %i alias %i has value %i.\n", evtType, portNr, inpAddr, btnValue);
     DynamicJsonDocument doc(1200);
     char myMqttMsg[400];
     
-    if (globalClient != NULL)
-    {
-        doc["Cmd"] = "HWBtn";
-        JsonArray data = doc.createNestedArray("Data");
-        data.add(evtType);
-        data.add(portNr);
-        data.add(inpAddr);
-        data.add(btnValue);
-        serializeJson(doc, myMqttMsg);
-        globalClient->text(myMqttMsg);
-        Serial.println(myMqttMsg);
-        lastWifiUse = millis();
-    }
+    doc["Cmd"] = "HWBtn";
+    JsonArray data = doc.createNestedArray("Data");
+    data.add(evtType);
+    data.add(portNr);
+    data.add(inpAddr);
+    data.add(btnValue);
+    serializeJson(doc, myMqttMsg);
+    globalClient->text(myMqttMsg);
+    Serial.println(myMqttMsg);
+    lastWifiUse = millis();
+  }
 }
