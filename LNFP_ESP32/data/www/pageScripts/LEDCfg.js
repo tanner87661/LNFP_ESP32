@@ -386,9 +386,9 @@ function setLEDData(sender)
 							configWorkData.LEDDefs[thisRow].LEDNums.push(newArray[i]);
 						adjustColorEntries(thisRow);
 					}
-					else
+					else //==1
 					{
-						configWorkData.LEDDefs[thisRow].LEDNums = newArray[0];
+						configWorkData.LEDDefs[thisRow].LEDNums = [newArray[0]];
 						configWorkData.LEDDefs[thisRow].MultiColor = false;
 					}
 				}
