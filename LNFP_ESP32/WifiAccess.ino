@@ -2,7 +2,7 @@ void establishWifiConnection(AsyncWebServer * webServer,DNSServer * dnsServer)
 {
     AsyncWiFiManager wifiManager(webServer,dnsServer);
     //reset settings - for testing
-    //wifiManager.resetSettings();
+//    wifiManager.resetSettings();
 
     if (useStaticIP) //set static IP information, if DHCP is not used for STA connection
     {
@@ -21,6 +21,8 @@ void establishWifiConnection(AsyncWebServer * webServer,DNSServer * dnsServer)
           Serial.println("failed to connect and hit timeout, setting up AP, if configured, otherwise restart ESP32");
           wifiCfgMode  &= 0xFE;        //clear STA Mode
         }
+        else
+          Serial.println(WiFi.localIP());
     }
      
     if ((wifiCfgMode & 0x02) > 0) //if AP is needed, define the AP settings

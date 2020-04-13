@@ -140,7 +140,7 @@ void sendAnalogCommand(uint16_t btnNr, uint16_t analogVal)
 
 void sendPowerCommand(uint8_t cmdType, uint8_t pwrStatus)
 { 
-  Serial.printf("Power Command %i %i\n", cmdType, pwrStatus);
+  Serial.printf("Power Command %i %i %i\n", cmdType, pwrStatus, getPowerStatus());
   lnTransmitMsg txData;
   txData.lnMsgSize = 2;
   if (cmdType == toggle)

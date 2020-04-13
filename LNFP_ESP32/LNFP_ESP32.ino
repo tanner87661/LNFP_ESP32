@@ -1,11 +1,10 @@
-const String BBVersion = "1.1.0";
+const String BBVersion = "1.2.0";
 
 //#define measurePerformance //uncomment this to display the number of loop cycles per second
 
 
 //Arduino published libraries. Install using the Arduino IDE or download from Github and install manually
 #include <arduino.h>
-#include <EEPROM.h> //standard library, can be installed in the Arduino IDE
 #include <WiFi.h>
 #include <time.h>
 #include <ESPAsyncWebServer.h>
@@ -15,6 +14,7 @@ const String BBVersion = "1.1.0";
 #define FORMAT_SPIFFS_IF_FAILED true
 #include <ArduinoJson.h> //standard JSON library, can be installed in the Arduino IDE. Make sure to use version 6.x
 #include <NmraDcc.h> //install via Arduino IDE
+#include <M5StickC.h>
 
 //following libraries can be downloaded from https://github.com/tanner87661?tab=repositories
 #include <IoTT_DigitraxBuffers.h> //as introduced in video # 30
@@ -55,6 +55,8 @@ uint32_t lastWifiUse = millis();
 #define wifiShutTimeout 120000 //after 2 Mins of not using, Wifi is closed
 #define keepAliveInterval 30000 //send message every 30 secs to keep connection alive
 uint32_t keepAlive = millis(); //timer used for periodic message sent over wifi to keep alive while browser is connected. Sent over websocket connection
+#define dispStatusInterval 200 //refresh DCC Viewer every 200ms with circular commands
+uint32_t dispStatusTimer = millis();
 
 //more library object pointers. Libraries will be dynamically initialized as needed during the setup() function
 IoTT_Mux64Buttons * myButtons = NULL;
@@ -74,6 +76,7 @@ uint32_t myTimer = millis() + 1000;
 
 //********************************************************Hardware Configuration******************************************************
 #define LED_DATA_PIN 12 //this is used to initialize the FastLED template
+#define LED_CLOCK_PIN 13 //this is used to initialize the FastLED template
 //***********************************************************************************************************************************
 
 //global variables for the NTP module
@@ -105,7 +108,12 @@ uint16_t sendMsg(lnTransmitMsg txData)
   {
     case 1: if (lnSerial) lnSerial->lnWriteMsg(txData); break;
     case 2: if (lnMQTT) lnMQTT->lnWriteMsg(txData); break;
-    case 3: if (commGateway) commGateway->lnWriteMsg(txData); break;
+    case 3: if (commGateway) 
+            { 
+              Serial.println("Calling Gateway"); 
+              commGateway->lnWriteMsg(txData); 
+            }
+            break;
   }
 }
 
@@ -209,7 +217,7 @@ void setup() {
       // Setup which External Interrupt, the Pin it's associated with that we're using and enable the Pull-Up 
       myDcc->pin((*jsonConfigObj)["DccConfig"]["DccInPin"], 1);
       // Call the main DCC Init function to enable the DCC Receiver
-      myDcc->initAccessoryDecoder(MAN_ID_DIY, 10, CV29_ACCESSORY_DECODER | CV29_OUTPUT_ADDRESS_MODE, 0 );
+      myDcc->init(MAN_ID_DIY, 10, FLAGS_CV29_BITS, 0 );
       Serial.println("DCC Init Done");
     }
     else 
@@ -232,10 +240,74 @@ void setup() {
         {
           myChain = new IoTT_ledChain(); // ... construct now, and call setup later
           myChain->loadLEDChainJSON(*jsonDataObj);
+          char chainType[10];
+          char colType[10];
+          JsonObject * myParams = NULL;
+          if (jsonDataObj->containsKey("ChainParams"))
+          {
+            Serial.println("Loading ChainParams");
+            myParams = new JsonObject((*jsonDataObj)["ChainParams"]);
+          }
+          else
+            Serial.println("No ChainParams");
+          if (myParams != NULL)
+          {
+            Serial.println("Interpreting ChainParams");
+            if (myParams->containsKey("ChainType"))
+              strcpy(chainType, (*myParams)["ChainType"]);
+            else
+            {
+              Serial.println("No Key ChainType");
+              strcpy(chainType, "WS2812");
+            }
+            if (myParams->containsKey("ColorSeq"))
+              strcpy(colType, (*myParams)["ColorSeq"]);
+            else
+            {
+              Serial.println("No Key ColorSeq");
+              strcpy(colType, "GRB");
+            }
+            delete myParams;
+          }
+          else
+          {
+            Serial.println("Default ChainParams");
+            strcpy(chainType, "WS2812");
+            strcpy(colType, "GRB");
+          }
           delete(jsonDataObj);
-//          Serial.println("Init LED Chain");  
-          const char thisPin = 12;//(*jsonConfigObj)["LEDDataPin"];
-          FastLED.addLeds<WS2811, LED_DATA_PIN, GRB>(myChain->getChain(), myChain->getChainLength());
+          if (strcmp(chainType, "WS2812") == 0)
+          {
+            Serial.printf("Init LED Chain on Pin %i, %i LEDs long\n", LED_DATA_PIN, myChain->getChainLength());  
+            if (strcmp(colType, "GRB") == 0)
+            {
+              Serial.println(colType);
+              Serial.println(chainType);
+              FastLED.addLeds<WS2811, LED_DATA_PIN, GRB>(myChain->getChain(), myChain->getChainLength()); 
+            }
+            if (strcmp(colType, "RGB") == 0)
+            {
+              Serial.println(colType);
+              Serial.println(chainType);
+              FastLED.addLeds<WS2811, LED_DATA_PIN, RGB>(myChain->getChain(), myChain->getChainLength()); 
+            }
+          } 
+          if (strcmp(chainType, "WS2801") == 0)
+          {
+            Serial.printf("Init LED Chain on Pins %i %i, %i LEDs long\n", LED_DATA_PIN, LED_CLOCK_PIN, myChain->getChainLength());  
+            if (strcmp(colType, "GRB") == 0)
+            {
+              Serial.println(colType);
+              Serial.println(chainType);
+              FastLED.addLeds<WS2801, LED_DATA_PIN, LED_CLOCK_PIN, GRB>(myChain->getChain(), myChain->getChainLength()); 
+            }
+            if (strcmp(colType, "RGB") == 0)
+            {
+              Serial.println(colType);
+              Serial.println(chainType);
+              FastLED.addLeds<WS2801, LED_DATA_PIN, LED_CLOCK_PIN, RGB>(myChain->getChain(), myChain->getChainLength()); 
+            }
+          } 
         }
       }
       else 
@@ -258,7 +330,7 @@ void setup() {
           if (jsonDataObj != NULL)
           {
             myButtons = new IoTT_Mux64Buttons();
-            myButtons->initButtons(addrLines[0], addrLines[1],addrLines[2], addrLines[3], &analogPins[0], (*jsonConfigObj)["useWifi"]); //use WiFi with buttons, this has limitations on ADC that can be used
+            myButtons->initButtons(addrLines[0], addrLines[1],addrLines[2], addrLines[3], &analogPins[0], true); //use WiFi with buttons (always), this has limitations on ADC that can be used
             Serial.println("Load Button Data");  
             myButtons->loadButtonCfgJSON(*jsonDataObj);
             delete(jsonDataObj);
@@ -268,6 +340,7 @@ void setup() {
       else 
         Serial.println("HW Button Module not activated");
     }
+
     if (jsonConfigObj->containsKey("useButtonHandler"))
     {
       if (((bool)(*jsonConfigObj)["useButtonHandler"])&& (modMode == 1)) //must be ALM
@@ -349,7 +422,6 @@ void loop() {
     myTimer += 1000;
   }
 #endif  
-
   if (myButtons) myButtons->processButtons(); //checks if a button was pressed and sends button messages
   if (myChain) myChain->processChain(); //updates all LED's based on received status information for switches, inputs, buttons, etc.
 //  if (secElHandlerList) secElHandlerList->processLoop(); //calculates speeds in all blocks and sets signals accordingly
@@ -390,4 +462,10 @@ void loop() {
       lnSerial->processLoop(); //handling all LocoNet communication
 
   processBufferUpdates(); //updating DigitraxBuffers by querying information from LocoNet, e.g. slot statuses
+  if ((commMode == 0) && (modMode == 0)) //DCC/Decoder
+    if (millis() > dispStatusTimer)
+    {
+      sendRefreshBuffer();
+      dispStatusTimer = millis() + dispStatusInterval; //exact interval not important, we start with millis as base
+    }
 }

@@ -125,7 +125,24 @@ void sendKeepAlive()
   }
 }
 
-void processWsMesssage(String newMsg,AsyncWebSocketClient * client)
+String createCfgEntry(String cmdType)
+{
+  String fileStr = "\"Type\":\"" + cmdType + "\",\"Data\":";
+  if (cmdType == "pgNodeCfg")
+    fileStr += readFile("/configdata/node.cfg");
+  if (cmdType == "pgMQTTCfg")
+    fileStr += readFile("/configdata/mqtt.cfg");
+  if (cmdType == "pgHWBtnCfg")
+    fileStr += readFile("/configdata/btn.cfg");
+  if (cmdType == "pgBtnHdlrCfg")
+    fileStr += readFile("/configdata/btnevt.cfg");
+  if (cmdType == "pgLEDCfg")
+    fileStr += readFile("/configdata/led.cfg");
+//  Serial.println(fileStr);
+  return fileStr;
+}
+
+void processWsMessage(String newMsg,AsyncWebSocketClient * client)
 {
   Serial.println(newMsg);
   DynamicJsonDocument doc(3 * newMsg.length());
@@ -135,27 +152,39 @@ void processWsMesssage(String newMsg,AsyncWebSocketClient * client)
     if (doc.containsKey("Cmd"))
     {
       String thisCmd = doc["Cmd"];
+      if (thisCmd == "SetLED") //Request to switch on LED for identification purposes
+      {
+        JsonArray ledList = doc["LedNr"];
+        for (int i = 0; i < ledList.size(); i++)
+        {
+          Serial.printf("Setting Test LED %i\n", (uint16_t)ledList[i]);
+          if (myChain) myChain->identifyLED((uint16_t)ledList[i]);
+        }
+      }
+      if (thisCmd == "CfgFiles") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg"}
+      {
+        String fileStr = "{\"Cmd\":\"CfgFiles\", \"FileEntries\":[";
+        fileStr += "{" + createCfgEntry("pgNodeCfg")+ "},"; //this always first, is used to validate file
+        fileStr += "{" + createCfgEntry("pgMQTTCfg")+ "},";
+        fileStr += "{" + createCfgEntry("pgHWBtnCfg")+ "},";
+        fileStr += "{" + createCfgEntry("pgBtnHdlrCfg")+ "},";
+        fileStr += "{" + createCfgEntry("pgLEDCfg")+ "}";
+        fileStr += "]}";
+        Serial.println(fileStr);
+        client->text(fileStr);
+      }
       if (thisCmd == "CfgData") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg"}
       {
         String cmdType = doc["Type"];
-        String fileStr = "{\"Cmd\":\"CfgData\", \"Type\":\"" + cmdType + "\",\"Data\":";
-        if (cmdType == "pgNodeCfg")
-          fileStr += readFile("/configdata/node.cfg");
-        if (cmdType == "pgMQTTCfg")
-          fileStr += readFile("/configdata/mqtt.cfg");
-        if (cmdType == "pgHWBtnCfg")
-         fileStr += readFile("/configdata/btn.cfg");
-        if (cmdType == "pgBtnHdlrCfg")
-          fileStr += readFile("/configdata/btnevt.cfg");
-        if (cmdType == "pgLEDCfg")
-          fileStr += readFile("/configdata/led.cfg");
+        String fileStr = "{\"Cmd\":\"CfgData\", ";
+
         if (cmdType == "pgLNViewer")
           return;
         if (cmdType == "pgDCCViewer")
           return;
-
+        fileStr += createCfgEntry(cmdType);
         fileStr += "}";
-        Serial.println(fileStr);  
+        Serial.println(fileStr);
         client->text(fileStr);
       }
       if (thisCmd == "CfgUpdate") //Config Request Format: {"Cmd":"CfgData", "Type":"pgxxxxCfg", "Data":{}}
@@ -172,10 +201,16 @@ void processWsMesssage(String newMsg,AsyncWebSocketClient * client)
           writeJSONFile("/configdata/btnevt.cfg", fileStr);
         if (cmdType == "pgLEDCfg")
           writeJSONFile("/configdata/led.cfg", fileStr);
-        ESP.restart(); //configuration update requires restart to be sure dynamic allocation of objects is not messed up
+        if (!doc.containsKey("Restart")) //if old format, then restart
+          ESP.restart(); //configuration update requires restart to be sure dynamic allocation of objects is not messed up
+        else
+          if (doc["Restart"])
+            ESP.restart(); //configuration update requires restart to be sure dynamic allocation of objects is not messed up
       }
     }
   }
+  else
+    Serial.println("Deserialization error");
 }
 
 void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
@@ -212,7 +247,8 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
             wsBuffer[wsReadPtr] = (char) data[i];
             wsReadPtr++;
           }
-          processWsMesssage(String(wsBuffer), client);
+          wsBuffer[wsReadPtr] = (char)0;
+          processWsMessage(String(wsBuffer), client);
         } 
         else 
         {
@@ -241,6 +277,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
             wsBuffer[wsReadPtr] = (char) data[i];
             wsReadPtr++;
           }
+          wsBuffer[wsReadPtr] = (char)0;
         } 
         else 
         {
@@ -253,7 +290,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           if(info->final)
           {
             if(info->message_opcode == WS_TEXT)
-              processWsMesssage(String(wsBuffer), client);
+              processWsMessage(String(wsBuffer), client);
           }
         }
       }
