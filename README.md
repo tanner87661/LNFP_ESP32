@@ -1,6 +1,12 @@
 # LNFP_ESP32
 Arduino Sketch for CTC Panel and Signaling System
 
+New Version 1.2.0
+- added hyperlink on LED configuration web page to switch on selected LED address for 5 Secs for identification purposes
+- fixed reload/override of configuration web pages in case of web socket communication interruption
+- added possibility to download and upload configuration data to/from local disk file
+- some minor bug fixes
+
 Watch Video #31 on YouTube Channel IoTTCloud https://youtu.be/MuUwa7XUilw
 and Video #32 as well: https://youtu.be/sOKhavg7B9w
 
