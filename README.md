@@ -1,6 +1,9 @@
 # LNFP_ESP32
 Arduino Sketch for CTC Panel and Signaling System
 
+New Version 1.2.1
+- fixed some problems with WiFi when running as local AP
+
 New Version 1.2.0
 - added hyperlink on LED configuration web page to switch on selected LED address for 5 Secs for identification purposes
 - fixed reload/override of configuration web pages in case of web socket communication interruption
