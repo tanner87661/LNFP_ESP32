@@ -1,6 +1,12 @@
 # LNFP_ESP32
 Arduino Sketch for CTC Panel and Signaling System
 
+New version 1.2.3
+- changed storage routine to handle larger files (same as on IoTT Stick)
+- changed button handler and LED chain config file formats to latest version. 
+- Button handler now supports 2 button triggering of routes as shown in video #47
+- some minor bug fixes
+
 New Version 1.2.1
 - fixed some problems with WiFi when running as local AP
 
